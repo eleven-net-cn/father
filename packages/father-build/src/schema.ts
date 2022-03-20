@@ -26,6 +26,7 @@ export default {
             importLibToEs: {
               type: 'boolean',
             },
+            dir: noEmptyStr
           },
         },
       ],
@@ -95,7 +96,7 @@ export default {
       type: 'boolean',
     },
     injectCSS: {
-      type: 'boolean',
+      oneOf: [{ type: 'boolean' }, { instanceof: 'Function' }],
     },
     autoprefixer: {
       type: 'object',
@@ -103,7 +104,8 @@ export default {
     include: {
       oneOf: [
         { type: 'string' },
-        { type: 'object' }
+        { type: 'object' },
+        { type: 'array' },
       ]
     },
     runtimeHelpers: {
@@ -162,6 +164,9 @@ export default {
     },
     pkgs: {
       type: 'array',
+    },
+    pkgFilter: {
+      type: 'object',
     },
   },
 };

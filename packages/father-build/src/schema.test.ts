@@ -4,9 +4,9 @@ import schema from './schema';
 const ajv = new AJV();
 
 const successValidates = {
-  entry: ['a', ['a']],
+  entry: ['a', ['a'], ['a', 'b']],
   file: ['a'],
-  esm: [false, true, { type: 'rollup' }, { type: 'babel' }, { file: 'a' }, { mjs: true }],
+  esm: [false, true, { type: 'rollup' }, { type: 'babel' }, { file: 'a' }, { mjs: true }, {dir: 'a'}],
   cjs: [false, true, { type: 'rollup' }, { type: 'babel' }, { file: 'a' }],
   umd: [{ globals: {} }, { file: 'a' }, { name: 'a' }, { minFile: false }, { minFile: true }, { sourcemap: true }],
   extraBabelPlugins: [[]],
@@ -23,6 +23,7 @@ const successValidates = {
   doc: [{}],
   typescriptOpts: [{}],
   pkgs: [[]],
+  pkgFilter: [{}],
 };
 
 Object.keys(successValidates).forEach(key => {

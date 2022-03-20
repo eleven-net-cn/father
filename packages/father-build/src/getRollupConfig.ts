@@ -1,5 +1,6 @@
+import { existsSync } from 'fs'
 import { basename, extname, join } from 'path';
-import { ModuleFormat, RollupOptions } from 'rollup';
+import { ModuleFormat, RollupOptions, Plugin } from 'rollup';
 import url from '@rollup/plugin-url';
 import json from '@rollup/plugin-json';
 import replace from '@rollup/plugin-replace';
@@ -20,6 +21,7 @@ import { IBundleOptions } from './types';
 
 interface IGetRollupConfigOpts {
   cwd: string;
+  rootPath: string;
   entry: string;
   type: ModuleFormat;
   importLibToEs?: boolean;
@@ -33,7 +35,7 @@ interface IPkg {
 }
 
 export default function(opts: IGetRollupConfigOpts): RollupOptions[] {
-  const { type, entry, cwd, importLibToEs, bundleOpts } = opts;
+  const { type, entry, cwd, rootPath, importLibToEs, bundleOpts } = opts;
   const {
     umd,
     esm,
@@ -142,9 +144,18 @@ export default function(opts: IGetRollupConfigOpts): RollupOptions[] {
     },
   };
 
+  // https://github.com/umijs/father/issues/164
+  function mergePlugins(defaultRollupPlugins: Array<Plugin> = [], extraRollupPlugins: Array<Plugin> = []) {
+    const pluginsMap: Record<string, Plugin> = Object.assign(
+      defaultRollupPlugins.reduce((r, plugin) => ({ ...r, [plugin.name]: plugin }), {}),
+      extraRollupPlugins.reduce((r, plugin) => ({ ...r, [plugin.name]: plugin }), {}),
+    );
+    return Object.values(pluginsMap);
+  }
+
   function getPlugins(opts = {} as { minCSS: boolean; }) {
     const { minCSS } = opts;
-    return [
+    const defaultRollupPlugins = [
       url(),
       svgr(),
       postcss({
@@ -185,9 +196,9 @@ export default function(opts: IGetRollupConfigOpts): RollupOptions[] {
             // @see https://github.com/umijs/father/issues/61#issuecomment-544822774
             clean: true,
             cacheRoot: `${tempDir}/.rollup_plugin_typescript2_cache`,
-            // TODO: 支持往上找 tsconfig.json
+            // 支持往上找 tsconfig.json
             // 比如 lerna 的场景不需要每个 package 有个 tsconfig.json
-            tsconfig: join(cwd, 'tsconfig.json'),
+            tsconfig: [join(cwd, 'tsconfig.json'), join(rootPath, 'tsconfig.json')].find(existsSync),
             tsconfigDefaults: {
               compilerOptions: {
                 // Generate declaration files by default
@@ -207,18 +218,23 @@ export default function(opts: IGetRollupConfigOpts): RollupOptions[] {
         : []),
       babel(babelOpts),
       json(),
-      ...(extraRollupPlugins || []),
     ];
+    return mergePlugins(defaultRollupPlugins, extraRollupPlugins || []);
   }
 
   switch (type) {
     case 'esm':
+      const output: Record<string, any> = {
+        dir: join(cwd, `${esm && (esm as any).dir || 'dist'}`),
+        entryFileNames: `${(esm && (esm as any).file) || `${name}.esm`}.js`,
+      }
+    
       return [
         {
           input,
           output: {
             format,
-            file: join(cwd, `dist/${(esm && (esm as any).file) || `${name}.esm`}.js`),
+            ...output,
           },
           plugins: [...getPlugins(), ...(esm && (esm as any).minify ? [terser(terserOpts)] : [])],
           external: testExternal.bind(null, external, externalsExclude),

@@ -15,7 +15,7 @@ Library toolkit based on rollup, docz, storybook, jest, prettier and eslint.
 
 ## Features
 
-* ✔︎ 基于 [docz](https://www.docz.site/) 的文档功能
+* ✔︎ 基于 [docz](https://www.docz.site/) 的文档功能（**不再维护，建议 [迁移到 dumi](https://github.com/umijs/father/issues/241)** 或 单独安装 docz 使用）
 * ✔︎ 基于 [rollup](http://rollupjs.org/) 和 babel 的组件打包功能
 * ✔︎ 支持 TypeScript
 * ✔︎ 支持 cjs、esm 和 umd 三种格式的打包
@@ -290,7 +290,7 @@ export default {
 
 #### cssModules
 
-配置是否开启 css modules。
+配置是否开启 css modules。**虽然 father 提供这个能力，但不建议为组件库启用 CSS Modules，这将使得组件库用户很难覆写样式，下一版的 father 也将移除该特性。**
 
 * Type: `boolean | object`
 * Default: `false`
@@ -320,7 +320,7 @@ export default {
 
 是否在 \<head>里注入css, 如果`extractCSS: true`，则为`false`
 
-* Type: `boolean`
+* Type: `boolean | function`
 * Default: `true`
 
 #### extraBabelPresets
@@ -406,7 +406,7 @@ export default {
 
 #### disableTypeCheck
 
-是否禁用类型检测。
+是否禁用类型检测。注意，该配置开启后 `babel` 模式下**将不会生成 TypeScript 类型定义**。
 
 * Type: `boolean`
 * Default: `false`
@@ -639,7 +639,60 @@ export default {
 };
 ```
 
+### pkgFilter
+
+在 lerna 构建中，有需要对包进行过滤的需求
+
+可配置项如下:
+
+```ts
+{
+  /** 
+   * 指定包含的包 
+   */
+  include?: string[];
+  /** 
+   * 指定排除的包 
+   */
+  exclude?: string[];
+  /**
+   * 是否跳过私有的包 package.json private
+   * @default false
+   */
+  skipPrivate?: boolean;
+}
+```
+
+`pkgFilter` 允许自定义排除/包含部分包，只对过滤后的包进行构建
+
+例如: 存在  `@umi/util-1`、`@umi/util-2`、`@umi/core`、`@umi/test`(private) 多个包
+
+```ts
+// 只构建 `@umi/util-1`、`@umi/util-2`
+export default {
+  pkgFilter: {
+    include: ['@umi/util-*']
+  }
+}
+
+// 只构建 `@umi/util-1`、`@umi/core`、`@umi/test`
+export default {
+  pkgFilter: {
+    exclude: ['@umi/util-2']
+  }
+}
+
+// 只构建 `@umi/util-1`、`@umi/util-2`、`@umi/core`
+export default {
+  pkgFilter: {
+    skipPrivate: true
+  }
+}
+```
+
 ### pkgs
+
+**已提供根据依赖自动排序的功能，除非有特殊需求定制构建顺序的，此配置项可忽略**
 
 在 lerna 构建中，有可能出现组件间有构建先后的需求，比如在有两个包 `packages/father-a` 和 `packages/father-util`，在 `father-a` 中对 `father-util` 有依赖，此时需要先构建 `father-util` 才能保证构建的正确性
 
@@ -658,15 +711,15 @@ export default {
 
 一些小贴士：
 
-1. 通常只要配置 `esm: "rollup"` 就够了
+1. 通常只要配置 `esm: "babel"` 就够了
 2. cjs 和 esm 支持 rollup 和 babel 两种打包方式，rollup 是跟进 entry 把项目依赖打包在一起输出一个文件，babel 是把 src 目录转化成 lib（cjs） 或 es（esm）
-3. 如果要考虑 ssr，再配上 `cjs: "rollup"`
+3. 如果要考虑 ssr，再配上 `cjs: "babel"`
 4. `package.json` 里配上 `sideEffects: false | string[]`，会让 webpack 的 [tree-shaking](https://webpack.js.org/guides/tree-shaking/) 更高效
 
 ### 关于 dependencies、peerDependencies 和 external
 
 1. cjs 和 esm 格式打包方式选 rollup 时有个约定，dependencies 和 peerDependencies 里的内容会被 external
-2. esm.mjs 和 umd 格式，只有 peerDenendencies 会被 external
+2. esm.mjs 和 umd 格式，只有 peerDependencies 会被 external
 3. 打包方式 babel 时无需考虑 external，因为是文件到文件的编译，不处理文件合并
 
 ### 关于 babel 模式
